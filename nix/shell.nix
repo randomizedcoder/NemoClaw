@@ -1,7 +1,18 @@
 # Dev shell with all build, lint, and test tools.
-{ mkShell, gnumake, git, curl
-, shellcheck, shfmt, hadolint, ruff, pyright
-, nemoclaw, nodejs, python }:
+{
+  mkShell,
+  gnumake,
+  git,
+  curl,
+  shellcheck,
+  shfmt,
+  hadolint,
+  ruff,
+  pyright,
+  nemoclaw,
+  nodejs,
+  python,
+}:
 
 mkShell {
   # Inherit build dependencies from the nemoclaw package

@@ -46,9 +46,14 @@ rec {
   ];
 
   # Top-level symlink targets (derived from openclawDataDirs at the first path component)
-  openclawSymlinks = builtins.attrNames (builtins.listToAttrs
-    (map (d: { name = builtins.head (builtins.split "/" d); value = true; })
-     openclawDataDirs));
+  openclawSymlinks = builtins.attrNames (
+    builtins.listToAttrs (
+      map (d: {
+        name = builtins.head (builtins.split "/" d);
+        value = true;
+      }) openclawDataDirs
+    )
+  );
 
   # Patterns excluded from the project source derivation (projectSrc).
   # Only build artifacts and nix infrastructure (evaluated before filtering).

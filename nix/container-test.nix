@@ -2,13 +2,23 @@
 # Loads the image into Docker, runs structural checks, and reports image size.
 #
 # Usage: nix run .#container-test
-{ writeShellApplication, docker, coreutils, gawk
-, constants, container }:
+{
+  writeShellApplication,
+  docker,
+  coreutils,
+  gawk,
+  constants,
+  container,
+}:
 
 writeShellApplication {
   name = "nemoclaw-container-test";
 
-  runtimeInputs = [ docker coreutils gawk ];
+  runtimeInputs = [
+    docker
+    coreutils
+    gawk
+  ];
 
   text = ''
     set -euo pipefail

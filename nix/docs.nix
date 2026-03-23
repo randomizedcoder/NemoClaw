@@ -1,7 +1,13 @@
 # Sphinx documentation build (best-effort).
 # nvidia-sphinx-theme and sphinx-llm may not be in nixpkgs yet;
 # add buildPythonPackage stubs for them when needed.
-{ lib, stdenv, python314, constants, sources }:
+{
+  lib,
+  stdenv,
+  python314,
+  constants,
+  sources,
+}:
 
 let
   python = python314.withPackages (ps: [

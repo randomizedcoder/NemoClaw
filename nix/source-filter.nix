@@ -6,7 +6,8 @@ let
   root = ./..;
 
   # Filter that excludes patterns listed in constants.excludePatterns
-  excludeFilter = path: _type:
+  excludeFilter =
+    path: _type:
     let
       baseName = baseNameOf (toString path);
     in
@@ -25,31 +26,54 @@ let
   # Just the nemoclaw/ TypeScript plugin directory
   pluginSrc = lib.cleanSourceWith {
     src = root + "/nemoclaw";
-    filter = path: type:
-      let baseName = baseNameOf (toString path);
-      in !builtins.elem baseName [ "node_modules" "dist" ];
+    filter =
+      path: type:
+      let
+        baseName = baseNameOf (toString path);
+      in
+      !builtins.elem baseName [
+        "node_modules"
+        "dist"
+      ];
     name = "nemoclaw-plugin-source";
   };
 
   # Just the nemoclaw-blueprint/ directory
   blueprintSrc = lib.cleanSourceWith {
     src = root + "/nemoclaw-blueprint";
-    filter = path: type:
-      let baseName = baseNameOf (toString path);
-      in !builtins.elem baseName [ "__pycache__" ".ruff_cache" ];
+    filter =
+      path: type:
+      let
+        baseName = baseNameOf (toString path);
+      in
+      !builtins.elem baseName [
+        "__pycache__"
+        ".ruff_cache"
+      ];
     name = "nemoclaw-blueprint-source";
   };
 
   # Just the docs/ directory
   docsSrc = lib.cleanSourceWith {
     src = root + "/docs";
-    filter = path: type:
-      let baseName = baseNameOf (toString path);
-      in !builtins.elem baseName [ "_build" "__pycache__" ];
+    filter =
+      path: type:
+      let
+        baseName = baseNameOf (toString path);
+      in
+      !builtins.elem baseName [
+        "_build"
+        "__pycache__"
+      ];
     name = "nemoclaw-docs-source";
   };
 
 in
 {
-  inherit projectSrc pluginSrc blueprintSrc docsSrc;
+  inherit
+    projectSrc
+    pluginSrc
+    blueprintSrc
+    docsSrc
+    ;
 }

@@ -2,8 +2,17 @@
 #
 # Phase A — compile the TypeScript plugin (buildNpmPackage)
 # Phase B — assemble plugin + blueprint + bin + scripts into a single derivation
-{ lib, stdenv, buildNpmPackage, makeWrapper
-, constants, sources, openclaw, nodejs, python }:
+{
+  lib,
+  stdenv,
+  buildNpmPackage,
+  makeWrapper,
+  constants,
+  sources,
+  openclaw,
+  nodejs,
+  python,
+}:
 
 let
   # Phase A: compile the TypeScript OpenClaw plugin
@@ -78,7 +87,13 @@ stdenv.mkDerivation {
     mkdir -p $out/bin
     makeWrapper ${nodejs}/bin/node $out/bin/nemoclaw \
       --add-flags "$out/lib/bin/nemoclaw.js" \
-      --prefix PATH : ${lib.makeBinPath [ nodejs python openclaw ]}
+      --prefix PATH : ${
+        lib.makeBinPath [
+          nodejs
+          python
+          openclaw
+        ]
+      }
 
     runHook postInstall
   '';

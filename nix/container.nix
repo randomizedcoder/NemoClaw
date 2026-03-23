@@ -1,9 +1,24 @@
 # OCI container image via dockerTools.buildLayeredImage.
 # Replicates the Dockerfile layout: sandbox user, openclaw config/data split,
 # plugin registration, and DAC lockdown.
-{ lib, dockerTools, runCommand, writeTextFile
-, bash, coreutils, findutils, cacert, git, curl, iproute2
-, constants, nemoclaw, openclaw, nodejs, python }:
+{
+  lib,
+  dockerTools,
+  runCommand,
+  writeTextFile,
+  bash,
+  coreutils,
+  findutils,
+  cacert,
+  git,
+  curl,
+  iproute2,
+  constants,
+  nemoclaw,
+  openclaw,
+  nodejs,
+  python,
+}:
 
 let
   # Generate /etc/passwd and /etc/group entries
@@ -17,8 +32,14 @@ let
     ${constants.user.group}:x:${toString constants.user.gid}:
   '';
 
-  passwd = writeTextFile { name = "passwd"; text = passwdEntry; };
-  group = writeTextFile { name = "group"; text = groupEntry; };
+  passwd = writeTextFile {
+    name = "passwd";
+    text = passwdEntry;
+  };
+  group = writeTextFile {
+    name = "group";
+    text = groupEntry;
+  };
 
   # Runtime config generator — writes openclaw.json on first run if missing.
   # This keeps the image reproducible (no secrets/tokens baked in).
@@ -34,13 +55,15 @@ let
   pluginRegistry = writeTextFile {
     name = "openclaw-plugins.json";
     text = builtins.toJSON {
-      plugins = [{
-        id = "nemoclaw";
-        name = "NemoClaw";
-        version = constants.nemoclawVersion;
-        path = constants.paths.pluginDir;
-        enabled = true;
-      }];
+      plugins = [
+        {
+          id = "nemoclaw";
+          name = "NemoClaw";
+          version = constants.nemoclawVersion;
+          path = constants.paths.pluginDir;
+          enabled = true;
+        }
+      ];
     };
   };
 
@@ -49,11 +72,15 @@ let
     mkdir -p $out${constants.user.home}
 
     # .openclaw-data directories
-    ${lib.concatMapStringsSep "\n" (d: "mkdir -p $out${constants.paths.openclawData}/${d}") constants.openclawDataDirs}
+    ${lib.concatMapStringsSep "\n" (
+      d: "mkdir -p $out${constants.paths.openclawData}/${d}"
+    ) constants.openclawDataDirs}
 
     # .openclaw directory with symlinks to .openclaw-data
     mkdir -p $out${constants.paths.openclawConfig}
-    ${lib.concatMapStringsSep "\n" (d: "ln -s ${constants.paths.openclawData}/${d} $out${constants.paths.openclawConfig}/${d}") constants.openclawSymlinks}
+    ${lib.concatMapStringsSep "\n" (
+      d: "ln -s ${constants.paths.openclawData}/${d} $out${constants.paths.openclawConfig}/${d}"
+    ) constants.openclawSymlinks}
 
     # update-check.json symlink
     touch $out${constants.paths.openclawData}/update-check.json
@@ -124,7 +151,16 @@ dockerTools.buildLayeredImage {
     Env = [
       "NEMOCLAW_MODEL=${constants.defaults.model}"
       "CHAT_UI_URL=${constants.defaults.chatUiUrl}"
-      "PATH=/usr/local/bin:/usr/bin:/bin:${lib.makeBinPath [ nodejs python git curl openclaw nemoclaw ]}"
+      "PATH=/usr/local/bin:/usr/bin:/bin:${
+        lib.makeBinPath [
+          nodejs
+          python
+          git
+          curl
+          openclaw
+          nemoclaw
+        ]
+      }"
       "NODE_PATH=${nodejs}/lib/node_modules"
       "SSL_CERT_FILE=${cacert}/etc/ssl/certs/ca-bundle.crt"
     ];

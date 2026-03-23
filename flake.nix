@@ -6,8 +6,14 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = import nixpkgs {
           inherit system;
@@ -34,12 +40,24 @@
 
         # NemoClaw package (TS plugin + assembly)
         nemoclaw = pkgs.callPackage ./nix/package.nix {
-          inherit constants sources openclaw nodejs python;
+          inherit
+            constants
+            sources
+            openclaw
+            nodejs
+            python
+            ;
         };
 
         # OCI container image
         container = pkgs.callPackage ./nix/container.nix {
-          inherit constants nemoclaw openclaw nodejs python;
+          inherit
+            constants
+            nemoclaw
+            openclaw
+            nodejs
+            python
+            ;
         };
 
         # Documentation (best-effort, uses its own Python with Sphinx packages)
@@ -55,12 +73,20 @@
       {
         packages = {
           default = nemoclaw;
-          inherit nemoclaw openclaw container container-test docs;
+          inherit
+            nemoclaw
+            openclaw
+            container
+            container-test
+            docs
+            ;
         };
 
         devShells.default = pkgs.callPackage ./nix/shell.nix {
           inherit nemoclaw nodejs python;
         };
+
+        formatter = pkgs.nixfmt;
 
         checks = {
           inherit nemoclaw;
