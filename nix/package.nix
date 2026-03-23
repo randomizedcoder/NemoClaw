@@ -61,12 +61,19 @@ stdenv.mkDerivation {
   installPhase = ''
     runHook preInstall
 
-    # Plugin files
+    # Plugin files (compiled output for direct use)
     mkdir -p $out/lib/nemoclaw
     cp -r ${plugin}/dist       $out/lib/nemoclaw/dist
     cp -r ${plugin}/node_modules $out/lib/nemoclaw/node_modules
     cp    ${plugin}/openclaw.plugin.json $out/lib/nemoclaw/
     cp    ${plugin}/package.json         $out/lib/nemoclaw/
+
+    # Plugin source files — the Dockerfile has its own multi-stage build that
+    # compiles TypeScript from source inside the sandbox image, so onboard.js
+    # needs tsconfig.json, src/, and package-lock.json in the build context.
+    cp    nemoclaw/tsconfig.json    $out/lib/nemoclaw/
+    cp    nemoclaw/package-lock.json $out/lib/nemoclaw/
+    cp -r nemoclaw/src              $out/lib/nemoclaw/src
 
     # Blueprint
     mkdir -p $out/lib/nemoclaw-blueprint
@@ -83,10 +90,20 @@ stdenv.mkDerivation {
     # Root package.json — nemoclaw.js reads it via ../package.json
     cp package.json $out/lib/package.json
 
+    # Dockerfile — onboard.js copies it into a temp build context
+    cp Dockerfile $out/lib/Dockerfile
+
+    # Nix store files are read-only; onboard.js copies them into a temp build
+    # context with cp -r, preserving the read-only mode, then rm fails on
+    # cleanup. Patch the installed copy to use --no-preserve=mode.
+    substituteInPlace $out/lib/bin/lib/onboard.js \
+      --replace-fail 'cp -r "' 'cp -r --no-preserve=mode "'
+
     # Wrapper binary
     mkdir -p $out/bin
     makeWrapper ${nodejs}/bin/node $out/bin/nemoclaw \
       --add-flags "$out/lib/bin/nemoclaw.js" \
+      --set-default OPENSHELL_GATEWAY_PORT "${constants.defaults.gatewayPort}" \
       --prefix PATH : ${
         lib.makeBinPath [
           nodejs
@@ -96,6 +113,15 @@ stdenv.mkDerivation {
       }
 
     runHook postInstall
+  '';
+
+  # Nix auto-patches shebangs in fixupPhase to point at /nix/store/…/bash.
+  # Scripts under lib/scripts/ are copied into non-nix Docker containers by
+  # onboard.js, so restore portable shebangs after fixup runs.
+  postFixup = ''
+    for f in $out/lib/scripts/*.sh; do
+      sed -i '1s|^#!.*/bin/bash|#!/usr/bin/env bash|' "$f"
+    done
   '';
 
   meta = {

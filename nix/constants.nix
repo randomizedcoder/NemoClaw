@@ -30,6 +30,7 @@ rec {
   defaults = {
     model = "nvidia/nemotron-3-super-120b-a12b";
     chatUiUrl = "http://127.0.0.1:18789";
+    gatewayPort = "8080";
   };
 
   # Directories under .openclaw-data that get symlinked into .openclaw
