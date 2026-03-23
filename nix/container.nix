@@ -144,8 +144,8 @@ dockerTools.buildLayeredImage {
   '';
 
   config = {
-    Entrypoint = [ "/bin/bash" ];
-    Cmd = [ ];
+    Entrypoint = [ "/usr/local/bin/nemoclaw-start" ];
+    Cmd = [ ];  # Override with: docker run --entrypoint /bin/bash ...
     User = "${toString constants.user.uid}:${toString constants.user.gid}";
     WorkingDir = constants.user.home;
     Env = [

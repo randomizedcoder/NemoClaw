@@ -78,7 +78,7 @@ writeShellApplication {
 
     # ── Start container ─────────────────────────────────────────
     echo "Starting container..."
-    CONTAINER=$(docker create --name nemoclaw-nix-test "$IMAGE" -c "sleep 300")
+    CONTAINER=$(docker create --name nemoclaw-nix-test --entrypoint /bin/bash "$IMAGE" -c "sleep 300")
     docker start "$CONTAINER"
 
     echo ""
@@ -120,6 +120,10 @@ writeShellApplication {
     # passwd/group
     check "/etc/passwd exists" run_in "test -f /etc/passwd"
     check "/etc/group exists"  run_in "test -f /etc/group"
+
+    # Entrypoint
+    check_output "entrypoint is nemoclaw-start" "/usr/local/bin/nemoclaw-start" \
+      docker inspect "$IMAGE" --format '{{join .Config.Entrypoint " "}}'
 
     # SSL certs (needed for API calls)
     check "CA certs available" run_in "test -f /etc/ssl/certs/ca-bundle.crt"
