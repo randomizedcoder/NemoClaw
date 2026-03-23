@@ -11,6 +11,9 @@
       let
         pkgs = import nixpkgs {
           inherit system;
+          # openclaw is an autonomous AI agent marked insecure in nixpkgs because
+          # it can execute arbitrary code. Acceptable here: NemoClaw is itself an
+          # openclaw extension that requires the CLI, and the container runs sandboxed.
           config.permittedInsecurePackages = [
             "openclaw-2026.3.12"
           ];
@@ -62,6 +65,8 @@
         checks = {
           inherit nemoclaw;
           shell = self.devShells.${system}.default;
+          # Requires Docker; uncomment for CI environments with Docker available:
+          # inherit container-test;
         };
       }
     );

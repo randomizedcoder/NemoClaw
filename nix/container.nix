@@ -106,7 +106,8 @@ dockerTools.buildLayeredImage {
 
     # DAC lockdown: root owns .openclaw so sandbox user cannot modify config
     chown -R root:root .${constants.paths.openclawConfig}
-    chmod 1777 .${constants.paths.openclawConfig}
+    find .${constants.paths.openclawConfig} -type d -exec chmod 755 {} +
+    find .${constants.paths.openclawConfig} -type f -exec chmod 644 {} +
 
     # .openclaw-data stays writable by sandbox user
     chown -R ${toString constants.user.uid}:${toString constants.user.gid} .${constants.paths.openclawData}

@@ -50,14 +50,15 @@ rec {
     (map (d: { name = builtins.head (builtins.split "/" d); value = true; })
      openclawDataDirs));
 
-  # Patterns excluded from source filtering
+  # Patterns excluded from the project source derivation (projectSrc).
+  # Only build artifacts and nix infrastructure (evaluated before filtering).
+  # Note: flake.nix and flake.lock are intentionally NOT excluded — changes
+  # to locked inputs or build logic should invalidate the source hash.
   excludePatterns = [
     ".git"
     "node_modules"
     "dist"
     "__pycache__"
     "nix"
-    "flake.nix"
-    "flake.lock"
   ];
 }

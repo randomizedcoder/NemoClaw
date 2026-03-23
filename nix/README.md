@@ -150,7 +150,7 @@ docker run -it nemoclaw:0.1.0 nemoclaw --help
 
 ## Architecture
 
-```
+```text
 flake.nix                    # Coordinator — imports from ./nix/
   |
   +-- nix/constants.nix      # Pure data: versions, paths, user config
@@ -166,7 +166,7 @@ OpenClaw comes directly from nixpkgs (`pkgs.openclaw`).
 
 ### Module Dependencies
 
-```
+```text
 constants.nix --+---> source-filter.nix --+---> package.nix --+---> container.nix
                 |                         |                   |
                 |  pkgs.openclaw ---------+-------------------+
