@@ -115,7 +115,7 @@ nix run .#container-test
 
 The test verifies: binaries on PATH, Node.js version, filesystem layout
 (sandbox home, `.openclaw`/`.openclaw-data` split, plugin dir, blueprints),
-symlink integrity, user/group IDs, SSL certs, and Python packages.
+symlink integrity, user/group IDs, container entrypoint, SSL certs, and Python packages.
 
 ### Manual Usage
 
@@ -124,20 +124,30 @@ symlink integrity, user/group IDs, SSL certs, and Python packages.
 nix build .#container
 docker load < result
 
-# Run with default settings
-docker run -it nemoclaw:0.1.0
+# Run (starts nemoclaw-start entrypoint by default)
+docker run --rm -it nemoclaw:0.1.0
 
 # Run with custom model and API key
-docker run -it \
+docker run --rm -it \
   -e NEMOCLAW_MODEL=nvidia/nemotron-3-super-120b-a12b \
   -e NVIDIA_API_KEY=your-key \
   -e CHAT_UI_URL=http://127.0.0.1:18789 \
   -p 18789:18789 \
-  nemoclaw:0.1.0 \
-  /usr/local/bin/nemoclaw-start
+  nemoclaw:0.1.0
 
-# Or use the nemoclaw CLI directly
-docker run -it nemoclaw:0.1.0 nemoclaw --help
+# Interactive shell (override entrypoint)
+docker run --rm -it --entrypoint /bin/bash nemoclaw:0.1.0
+```
+
+### Running with Nix
+
+```bash
+# Show CLI help
+nix run
+
+# Run a subcommand (note the .# -- syntax)
+nix run .# -- onboard
+nix run .# -- list
 ```
 
 ### Environment Variables

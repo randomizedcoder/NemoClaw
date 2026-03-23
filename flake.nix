@@ -1,3 +1,19 @@
+# Quick start:
+#
+#   nix build                        Build the NemoClaw package (default)
+#   nix run                          Show NemoClaw CLI help
+#   nix run .# -- onboard            Configure inference endpoint and credentials
+#   nix develop                      Enter the dev shell
+#
+#   nix build .#container            Build the OCI container image (creates ./result)
+#   docker load < result             Load it into Docker
+#   docker run --rm -it nemoclaw:0.1.0                  Run (starts nemoclaw-start)
+#   docker run --rm -it --entrypoint /bin/bash nemoclaw:0.1.0   Interactive shell
+#
+#   nix run .#container-test         Run container smoke tests (requires Docker)
+#   nix build .#docs                 Build Sphinx documentation
+#   nix fmt                          Format all Nix files
+#
 {
   description = "NemoClaw — run OpenClaw inside OpenShell with NVIDIA inference";
 
