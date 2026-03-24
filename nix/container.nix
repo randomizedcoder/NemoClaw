@@ -128,8 +128,9 @@ dockerTools.buildLayeredImage {
     cp ${passwd} ./etc/passwd
     cp ${group}  ./etc/group
 
-    # Sandbox user owns their home
-    chown -R ${toString constants.user.uid}:${toString constants.user.gid} .${constants.user.home}
+    # Root owns the home dir so sandbox user cannot rename/delete .openclaw
+    chown root:root .${constants.user.home}
+    chmod 755 .${constants.user.home}
 
     # DAC lockdown: root owns .openclaw so sandbox user cannot modify config
     chown -R root:root .${constants.paths.openclawConfig}
@@ -138,6 +139,9 @@ dockerTools.buildLayeredImage {
 
     # .openclaw-data stays writable by sandbox user
     chown -R ${toString constants.user.uid}:${toString constants.user.gid} .${constants.paths.openclawData}
+
+    # .nemoclaw state stays writable by sandbox user
+    chown -R ${toString constants.user.uid}:${toString constants.user.gid} .${constants.paths.nemoclawState}
 
     # Start script
     chmod +x ./usr/local/bin/nemoclaw-start

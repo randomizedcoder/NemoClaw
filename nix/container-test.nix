@@ -78,7 +78,7 @@ writeShellApplication {
 
     # ── Start container ─────────────────────────────────────────
     echo "Starting container..."
-    CONTAINER=$(docker create --name nemoclaw-nix-test --entrypoint /bin/bash "$IMAGE" -c "sleep 300")
+    CONTAINER=$(docker create --entrypoint /bin/bash "$IMAGE" -c "sleep 300")
     docker start "$CONTAINER"
 
     echo ""
@@ -94,7 +94,7 @@ writeShellApplication {
     check "bash is on PATH"        run_in "command -v bash"
 
     # Runtime versions
-    check "node is v${constants.nodeVersion}.x"  run_in "node -e \"assert(process.version.startsWith('v${constants.nodeVersion}.'))\""
+    check "node is v${constants.nodeVersion}.x"  run_in "node -e \"process.exit(process.version.startsWith('v${constants.nodeVersion}.') ? 0 : 1)\""
 
     # Filesystem layout
     check "/sandbox exists"                       run_in "test -d /sandbox"
