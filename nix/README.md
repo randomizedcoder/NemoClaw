@@ -106,16 +106,32 @@ The image uses `dockerTools.buildLayeredImage` with 120 max layers for
 efficient Docker layer caching. Most of the size comes from Node.js, Python,
 Git, and the OpenClaw CLI.
 
+### Privilege Separation
+
+The container starts as root and uses `gosu` for privilege separation:
+- **gateway** (uid 999) — runs the openclaw gateway process, isolated from the agent
+- **sandbox** (uid 1000) — runs the agent and nemoclaw CLI
+
+This prevents the sandboxed agent from killing/restarting the gateway or
+tampering with its configuration.
+
 ### Smoke Test
 
 ```bash
-# Build, load, and run 27 structural checks (requires Docker daemon)
+# Build, load, and run 40 checks (requires Docker daemon)
 nix run .#container-test
 ```
 
-The test verifies: binaries on PATH (including gosu), Node.js version, filesystem layout
-(sandbox home, `.openclaw`/`.openclaw-data` split, plugin dir, blueprints),
-symlink integrity, gateway user/group, container entrypoint, SSL certs, and Python packages.
+The test runs 31 structural checks and 9 functional checks:
+
+**Structural:** binaries on PATH (node, python3, openclaw, nemoclaw, git, curl, bash, gosu),
+Node.js version, filesystem layout (sandbox home, `.openclaw`/`.openclaw-data` split,
+plugin dir, blueprints), symlink integrity, gateway user/group in passwd/group,
+container entrypoint, SSL certs, and Python packages.
+
+**Functional:** nemoclaw CLI (--version, --help), openclaw CLI (--version), plugin JS loads,
+blueprint content readable, policies dir present, gosu privilege drop to sandbox (uid 1000)
+and gateway (uid 999), CLI dist output exists.
 
 ### Manual Usage
 
@@ -154,9 +170,15 @@ nix run .# -- list
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NEMOCLAW_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | Inference model |
-| `CHAT_UI_URL` | `http://127.0.0.1:18789` | Chat UI origin |
+| `NEMOCLAW_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | Inference model (baked at build) |
+| `CHAT_UI_URL` | `http://127.0.0.1:18789` | Chat UI / dashboard origin |
 | `NVIDIA_API_KEY` | (none) | API key for NVIDIA-hosted inference |
+| `NEMOCLAW_MODEL_OVERRIDE` | (none) | Override model at startup without rebuilding |
+| `NEMOCLAW_INFERENCE_API_OVERRIDE` | (none) | Override inference API type (e.g. `anthropic-messages`) |
+| `NEMOCLAW_CONTEXT_WINDOW` | (none) | Override model context window size |
+| `NEMOCLAW_MAX_TOKENS` | (none) | Override model max output tokens |
+| `NEMOCLAW_REASONING` | (none) | Set `true` for reasoning models (o1, Claude thinking) |
+| `NEMOCLAW_CORS_ORIGIN` | (none) | Add browser origin to allowedOrigins at startup |
 
 ## Architecture
 
@@ -195,12 +217,12 @@ constants.nix --+---> source-filter.nix --+---> package.nix --+---> container.ni
 
 | File | Purpose |
 |------|---------|
-| `constants.nix` | Shared config: versions, user, paths, defaults |
+| `constants.nix` | Shared config: versions, sandbox/gateway users, paths, defaults |
 | `source-filter.nix` | `lib.cleanSourceWith` filters for each sub-project |
 | `package.nix` | Three-phase build: plugin + CLI `buildNpmPackage` + assembly |
 | `shell.nix` | Dev shell via `mkShell` with `inputsFrom` |
-| `container.nix` | OCI image via `dockerTools.buildLayeredImage` |
-| `container-test.nix` | Container smoke tests via `writeShellApplication` |
+| `container.nix` | OCI image via `dockerTools.buildLayeredImage` (gosu, gateway/sandbox users) |
+| `container-test.nix` | Container smoke tests: 40 checks (structural + functional) |
 | `docs.nix` | Sphinx documentation (best-effort) |
 
 ## Updating npm Hashes
@@ -248,5 +270,6 @@ is installed and your user is in the `docker` group (or use `sudo`).
 - **Three-derivation package build** — plugin and CLI compiled separately, then assembled
 - **OpenClaw from nixpkgs** — uses the upstream `pkgs.openclaw` package
 - **Runtime config generation** — `openclaw.json` written by start script, not baked in
-- **nixpkgs for standalone tools** (ruff, shellcheck); npm-local for version-locked devDeps
+- **gosu privilege separation** — container starts as root, drops to `gateway` (uid 999) for the openclaw gateway process and `sandbox` (uid 1000) for the agent, matching the upstream Dockerfile.base security model
+- **nixpkgs for standalone tools** (shellcheck, shfmt, hadolint); npm-local for version-locked devDeps
 - **120-layer OCI image** — maximizes Docker layer cache efficiency
