@@ -134,6 +134,35 @@ writeShellApplication {
     # pyyaml importable
     check "pyyaml importable" run_in "python3 -c 'import yaml'"
 
+    echo ""
+    echo "=== Functional Checks ==="
+
+    # NemoClaw CLI works
+    check_output "nemoclaw --version" "v${constants.nemoclawVersion}" run_in "nemoclaw --version"
+    check_output "nemoclaw --help shows commands" "onboard" run_in "nemoclaw --help"
+
+    # OpenClaw CLI works
+    check "openclaw --version" run_in "openclaw --version"
+
+    # Plugin loads without error
+    check "plugin JS loads" run_in "node -e 'require(\"${constants.paths.pluginDir}/dist/index.js\")'"
+
+    # Blueprint content is readable
+    check_output "blueprint version correct" "version:" \
+      run_in "cat ${constants.paths.nemoclawState}/blueprints/${constants.nemoclawVersion}/blueprint.yaml | head -5"
+
+    # Blueprint policies directory present
+    check "blueprint policies dir" run_in "test -d ${constants.paths.nemoclawState}/blueprints/${constants.nemoclawVersion}/policies"
+
+    # gosu can drop to sandbox user
+    check_output "gosu sandbox works" "1000" run_in "gosu sandbox id -u"
+
+    # gosu can drop to gateway user
+    check_output "gosu gateway works" "999" run_in "gosu gateway id -u"
+
+    # CLI dist compiled output exists (bin/nemoclaw.js requires ../dist/nemoclaw)
+    check "CLI dist/nemoclaw.js exists" run_in "test -f \$(readlink -f \$(command -v nemoclaw) | sed 's|/bin/nemoclaw|/lib/dist/nemoclaw.js|')"
+
     # ── Summary ─────────────────────────────────────────────────
     echo ""
     TOTAL=$((PASS + FAIL))
