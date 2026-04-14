@@ -1,7 +1,8 @@
-# NemoClaw package: two-phase build mirroring the Dockerfile's 2-stage pattern.
+# NemoClaw package: three-phase build mirroring the upstream architecture.
 #
 # Phase A — compile the TypeScript plugin (buildNpmPackage)
-# Phase B — assemble plugin + blueprint + bin + scripts into a single derivation
+# Phase B — compile the root CLI from src/ (buildNpmPackage)
+# Phase C — assemble plugin + CLI + blueprint + bin + scripts into a single derivation
 {
   lib,
   stdenv,
@@ -15,13 +16,13 @@
 }:
 
 let
-  # Phase A: compile the TypeScript OpenClaw plugin
+  # Phase A: compile the TypeScript OpenClaw plugin (nemoclaw/ directory)
   plugin = buildNpmPackage {
     pname = "nemoclaw-plugin";
     version = constants.nemoclawVersion;
     src = sources.pluginSrc;
 
-    npmDepsHash = "sha256-htKa54tdIhoJ/44buuF7bRZ2HXVwha/H9mFBV9X+weg=";
+    npmDepsHash = "sha256-Y1OfWVcYNRs/LnNui9rlW0OQSRIxa3dT2o9Q7hfwFtg=";
 
     # Build with tsc, then prune devDependencies
     buildPhase = ''
@@ -48,6 +49,41 @@ let
     meta.description = "NemoClaw TypeScript plugin (compiled)";
   };
 
+  # Phase B: compile the root CLI (src/ → dist/ via tsconfig.src.json)
+  # bin/nemoclaw.js is a thin shim that does require("../dist/nemoclaw")
+  cli = buildNpmPackage {
+    pname = "nemoclaw-cli";
+    version = constants.nemoclawVersion;
+    src = sources.cliSrc;
+
+    npmDepsHash = "sha256-RTlyyxoyd+5xVQeTWvKZcmgRJDXqcM346CJcRRYNTys=";
+
+    # Skip prepare/postinstall scripts — prek tries to download binaries,
+    # and the prepare script runs build:cli (we do that explicitly below).
+    npmFlags = [ "--ignore-scripts" ];
+
+    buildPhase = ''
+      runHook preBuild
+      npx tsc -p tsconfig.src.json
+      runHook postBuild
+    '';
+
+    installPhase = ''
+      runHook preInstall
+
+      mkdir -p $out
+      cp -r dist $out/dist
+
+      # Keep runtime deps (js-yaml, p-retry, yaml)
+      npm prune --omit=dev
+      cp -r node_modules $out/node_modules
+
+      runHook postInstall
+    '';
+
+    meta.description = "NemoClaw CLI (compiled from src/)";
+  };
+
 in
 stdenv.mkDerivation {
   pname = "nemoclaw";
@@ -69,13 +105,17 @@ stdenv.mkDerivation {
     cp    ${plugin}/package.json         $out/lib/nemoclaw/
 
     # Plugin source files — the Dockerfile has its own multi-stage build that
-    # compiles TypeScript from source inside the sandbox image, so onboard.js
-    # needs tsconfig.json, src/, and package-lock.json in the build context.
+    # compiles TypeScript from source inside the sandbox image, so the build
+    # context needs tsconfig.json, src/, and package-lock.json.
     cp    nemoclaw/tsconfig.json    $out/lib/nemoclaw/
     cp    nemoclaw/package-lock.json $out/lib/nemoclaw/
     cp -r nemoclaw/src              $out/lib/nemoclaw/src
 
-    # Blueprint
+    # Root CLI compiled output — bin/nemoclaw.js does require("../dist/nemoclaw")
+    cp -r ${cli}/dist $out/lib/dist
+    cp -r ${cli}/node_modules $out/lib/node_modules
+
+    # Blueprint (blueprint.yaml + policies only)
     mkdir -p $out/lib/nemoclaw-blueprint
     cp -r nemoclaw-blueprint/* $out/lib/nemoclaw-blueprint/
 
@@ -90,14 +130,11 @@ stdenv.mkDerivation {
     # Root package.json — nemoclaw.js reads it via ../package.json
     cp package.json $out/lib/package.json
 
-    # Dockerfile — onboard.js copies it into a temp build context
+    # Dockerfiles — build context needs both for sandbox image creation
     cp Dockerfile $out/lib/Dockerfile
-
-    # Nix store files are read-only; onboard.js copies them into a temp build
-    # context with cp -r, preserving the read-only mode, then rm fails on
-    # cleanup. Patch the installed copy to use --no-preserve=mode.
-    substituteInPlace $out/lib/bin/lib/onboard.js \
-      --replace-fail 'cp -r "' 'cp -r --no-preserve=mode "'
+    if [ -f Dockerfile.base ]; then
+      cp Dockerfile.base $out/lib/Dockerfile.base
+    fi
 
     # Wrapper binary
     mkdir -p $out/bin
@@ -117,7 +154,7 @@ stdenv.mkDerivation {
 
   # Nix auto-patches shebangs in fixupPhase to point at /nix/store/…/bash.
   # Scripts under lib/scripts/ are copied into non-nix Docker containers by
-  # onboard.js, so restore portable shebangs after fixup runs.
+  # the build context, so restore portable shebangs after fixup runs.
   postFixup = ''
     for f in $out/lib/scripts/*.sh; do
       sed -i '1s|^#!.*/bin/bash|#!/usr/bin/env bash|' "$f"

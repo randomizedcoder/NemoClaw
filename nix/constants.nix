@@ -7,7 +7,7 @@ rec {
   pythonVersion = "314";
   nemoclawVersion = "0.1.0";
 
-  # Container user
+  # Container users
   user = {
     name = "sandbox";
     group = "sandbox";
@@ -15,6 +15,16 @@ rec {
     gid = 1000;
     home = "/sandbox";
     shell = "/bin/bash";
+  };
+
+  # Gateway user for privilege separation — runs the openclaw gateway process.
+  # Separate from sandbox so the agent cannot kill/restart the gateway.
+  gatewayUser = {
+    name = "gateway";
+    group = "gateway";
+    uid = 999;
+    gid = 999;
+    shell = "/usr/sbin/nologin";
   };
 
   # Filesystem paths

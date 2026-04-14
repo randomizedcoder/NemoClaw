@@ -92,6 +92,7 @@ writeShellApplication {
     check "git is on PATH"         run_in "command -v git"
     check "curl is on PATH"        run_in "command -v curl"
     check "bash is on PATH"        run_in "command -v bash"
+    check "gosu is on PATH"        run_in "command -v gosu"
 
     # Runtime versions
     check "node is v${constants.nodeVersion}.x"  run_in "node -e \"process.exit(process.version.startsWith('v${constants.nodeVersion}.') ? 0 : 1)\""
@@ -113,13 +114,15 @@ writeShellApplication {
     check "extensions symlink" run_in "test -L ${constants.paths.openclawConfig}/extensions"
     check "workspace symlink"  run_in "test -L ${constants.paths.openclawConfig}/workspace"
 
-    # User/permissions
-    check_output "runs as uid ${toString constants.user.uid}" "${toString constants.user.uid}" run_in "id -u"
-    check_output "runs as gid ${toString constants.user.gid}" "${toString constants.user.gid}" run_in "id -g"
+    # User/permissions — container starts as root for gosu privilege separation
+    check_output "runs as uid 0 (root for gosu)" "0" run_in "id -u"
+    check_output "runs as gid 0 (root for gosu)" "0" run_in "id -g"
 
     # passwd/group
     check "/etc/passwd exists" run_in "test -f /etc/passwd"
     check "/etc/group exists"  run_in "test -f /etc/group"
+    check "gateway user in passwd" run_in "[[ \$(cat /etc/passwd) == *gateway* ]]"
+    check "gateway group in group" run_in "[[ \$(cat /etc/group) == *gateway* ]]"
 
     # Entrypoint
     check_output "entrypoint is nemoclaw-start" "/usr/local/bin/nemoclaw-start" \

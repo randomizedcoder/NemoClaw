@@ -30,19 +30,17 @@ mkShell {
     shellcheck
     shfmt
     hadolint
-    ruff
-    pyright
   ];
 
   shellHook = ''
     echo "NemoClaw dev shell"
     echo "  node:       $(node --version)"
     echo "  python:     $(python3 --version)"
-    echo "  ruff:       $(ruff --version)"
     echo "  shellcheck: $(shellcheck --version | head -2 | tail -1)"
     echo ""
     echo "Quick start:"
-    echo "  npm install          — install JS dependencies"
+    echo "  npm install          — install root JS dependencies"
+    echo "  npm run build:cli    — compile root CLI (src/ → dist/)"
     echo "  cd nemoclaw && npm run build  — compile TS plugin"
     echo "  npm test             — run test suite"
     echo "  nix build            — build nemoclaw package"

@@ -38,19 +38,41 @@ let
     name = "nemoclaw-plugin-source";
   };
 
-  # Just the nemoclaw-blueprint/ directory
+  # Just the nemoclaw-blueprint/ directory (blueprint.yaml + policies only)
   blueprintSrc = lib.cleanSourceWith {
     src = root + "/nemoclaw-blueprint";
+    filter = _path: _type: true;
+    name = "nemoclaw-blueprint-source";
+  };
+
+  # Root CLI source — compiled via tsconfig.src.json to dist/
+  cliSrc = lib.cleanSourceWith {
+    src = root;
     filter =
       path: type:
       let
         baseName = baseNameOf (toString path);
+        relPath = lib.removePrefix (toString root + "/") (toString path);
       in
-      !builtins.elem baseName [
-        "__pycache__"
-        ".ruff_cache"
-      ];
-    name = "nemoclaw-blueprint-source";
+      # Include root config files needed for the build
+      builtins.elem baseName [
+        "package.json"
+        "package-lock.json"
+        "tsconfig.src.json"
+      ]
+      # Include the src/ directory and everything inside it
+      || baseName == "src"
+      || (
+        lib.hasPrefix "src/" relPath
+        && !builtins.elem baseName [
+          "node_modules"
+          "dist"
+        ]
+      )
+      # Include bin/ directory — src/ imports JSON files from bin/lib/
+      || baseName == "bin"
+      || lib.hasPrefix "bin/" relPath;
+    name = "nemoclaw-cli-source";
   };
 
   # Just the docs/ directory
@@ -74,6 +96,7 @@ in
     projectSrc
     pluginSrc
     blueprintSrc
+    cliSrc
     docsSrc
     ;
 }

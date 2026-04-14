@@ -113,9 +113,9 @@ Git, and the OpenClaw CLI.
 nix run .#container-test
 ```
 
-The test verifies: binaries on PATH, Node.js version, filesystem layout
+The test verifies: binaries on PATH (including gosu), Node.js version, filesystem layout
 (sandbox home, `.openclaw`/`.openclaw-data` split, plugin dir, blueprints),
-symlink integrity, user/group IDs, container entrypoint, SSL certs, and Python packages.
+symlink integrity, gateway user/group, container entrypoint, SSL certs, and Python packages.
 
 ### Manual Usage
 
@@ -124,7 +124,7 @@ symlink integrity, user/group IDs, container entrypoint, SSL certs, and Python p
 nix build .#container
 docker load < result
 
-# Run (starts nemoclaw-start entrypoint by default)
+# Run (starts nemoclaw-start entrypoint as root, uses gosu for privilege separation)
 docker run --rm -it nemoclaw:0.1.0
 
 # Run with custom model and API key
@@ -165,7 +165,7 @@ flake.nix                    # Coordinator — imports from ./nix/
   |
   +-- nix/constants.nix      # Pure data: versions, paths, user config
   +-- nix/source-filter.nix  # Filtered sources for reproducible builds
-  +-- nix/package.nix        # NemoClaw: TS plugin build + assembly
+  +-- nix/package.nix        # NemoClaw: TS plugin + CLI build + assembly
   +-- nix/shell.nix          # Dev shell (mkShell + inputsFrom)
   +-- nix/container.nix      # OCI image (dockerTools.buildLayeredImage)
   +-- nix/container-test.nix # Container smoke tests (writeShellApplication)
@@ -173,6 +173,11 @@ flake.nix                    # Coordinator — imports from ./nix/
 ```
 
 OpenClaw comes directly from nixpkgs (`pkgs.openclaw`).
+
+The package build has three phases:
+1. **Phase A** — Compile the TypeScript plugin (`nemoclaw/` directory) via `buildNpmPackage`
+2. **Phase B** — Compile the root CLI (`src/` directory) via `buildNpmPackage` + `tsc`
+3. **Phase C** — Assemble plugin + CLI + blueprint + scripts into a single derivation
 
 ### Module Dependencies
 
@@ -192,7 +197,7 @@ constants.nix --+---> source-filter.nix --+---> package.nix --+---> container.ni
 |------|---------|
 | `constants.nix` | Shared config: versions, user, paths, defaults |
 | `source-filter.nix` | `lib.cleanSourceWith` filters for each sub-project |
-| `package.nix` | Two-phase build: `buildNpmPackage` (TS) + assembly |
+| `package.nix` | Three-phase build: plugin + CLI `buildNpmPackage` + assembly |
 | `shell.nix` | Dev shell via `mkShell` with `inputsFrom` |
 | `container.nix` | OCI image via `dockerTools.buildLayeredImage` |
 | `container-test.nix` | Container smoke tests via `writeShellApplication` |
@@ -200,10 +205,13 @@ constants.nix --+---> source-filter.nix --+---> package.nix --+---> container.ni
 
 ## Updating npm Hashes
 
-When `nemoclaw/package-lock.json` changes, the `npmDepsHash` in `package.nix`
-will become invalid. To update:
+There are two `npmDepsHash` values in `package.nix` — one for the plugin build
+(`nemoclaw/package-lock.json`) and one for the CLI build (root `package-lock.json`).
+When either `package-lock.json` changes, the corresponding hash will become invalid.
 
-1. Set `npmDepsHash = lib.fakeHash;` in `nix/package.nix`
+To update:
+
+1. Set `npmDepsHash = lib.fakeHash;` for the affected derivation in `nix/package.nix`
 2. Run `nix build` — it will fail and print the correct hash
 3. Replace `lib.fakeHash` with the printed hash
 
@@ -237,7 +245,7 @@ is installed and your user is in the `docker` group (or use `sudo`).
 ## Design Decisions
 
 - **`callPackage` for all modules** (except `constants.nix`) — auto-injects nixpkgs deps
-- **Two-derivation package build** — plugin compiled separately, then assembled
+- **Three-derivation package build** — plugin and CLI compiled separately, then assembled
 - **OpenClaw from nixpkgs** — uses the upstream `pkgs.openclaw` package
 - **Runtime config generation** — `openclaw.json` written by start script, not baked in
 - **nixpkgs for standalone tools** (ruff, shellcheck); npm-local for version-locked devDeps

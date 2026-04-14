@@ -1,6 +1,6 @@
 # OCI container image via dockerTools.buildLayeredImage.
-# Replicates the Dockerfile layout: sandbox user, openclaw config/data split,
-# plugin registration, and DAC lockdown.
+# Replicates the Dockerfile layout: sandbox user, gateway user for privilege
+# separation, openclaw config/data split, plugin registration, and DAC lockdown.
 {
   lib,
   dockerTools,
@@ -13,6 +13,7 @@
   git,
   curl,
   iproute2,
+  gosu,
   constants,
   nemoclaw,
   openclaw,
@@ -24,11 +25,13 @@ let
   # Generate /etc/passwd and /etc/group entries
   passwdEntry = ''
     root:x:0:0:root:/root:/bin/bash
+    ${constants.gatewayUser.name}:x:${toString constants.gatewayUser.uid}:${toString constants.gatewayUser.gid}:${constants.gatewayUser.name}:${constants.user.home}:${constants.gatewayUser.shell}
     ${constants.user.name}:x:${toString constants.user.uid}:${toString constants.user.gid}:${constants.user.name}:${constants.user.home}:${constants.user.shell}
   '';
 
   groupEntry = ''
     root:x:0:
+    ${constants.gatewayUser.group}:x:${toString constants.gatewayUser.gid}:
     ${constants.user.group}:x:${toString constants.user.gid}:
   '';
 
@@ -115,6 +118,7 @@ dockerTools.buildLayeredImage {
     git
     curl
     iproute2
+    gosu
     openclaw
     nemoclaw
     sandboxFs
@@ -148,9 +152,11 @@ dockerTools.buildLayeredImage {
   '';
 
   config = {
+    # Entrypoint runs as root so gosu can drop to gateway/sandbox users
     Entrypoint = [ "/usr/local/bin/nemoclaw-start" ];
-    Cmd = [ ];  # Override with: docker run --entrypoint /bin/bash ...
-    User = "${toString constants.user.uid}:${toString constants.user.gid}";
+    Cmd = [ ];
+    # Run as root — nemoclaw-start uses gosu for privilege separation
+    User = "0:0";
     WorkingDir = constants.user.home;
     Env = [
       "NEMOCLAW_MODEL=${constants.defaults.model}"
@@ -161,6 +167,7 @@ dockerTools.buildLayeredImage {
           python
           git
           curl
+          gosu
           openclaw
           nemoclaw
         ]
