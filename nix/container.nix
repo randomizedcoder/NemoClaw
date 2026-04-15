@@ -149,6 +149,7 @@ dockerTools.buildLayeredImage {
 
     # Start script
     chmod +x ./usr/local/bin/nemoclaw-start
+
   '';
 
   config = {

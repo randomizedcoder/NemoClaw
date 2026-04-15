@@ -133,6 +133,32 @@ container entrypoint, SSL certs, and Python packages.
 blueprint content readable, policies dir present, gosu privilege drop to sandbox (uid 1000)
 and gateway (uid 999), CLI dist output exists.
 
+### Security Scan
+
+```bash
+# Scan the container image for vulnerabilities and best-practice issues
+nix run .#container-scan
+```
+
+Runs two tools against the built container tarball (no Docker daemon required):
+
+- **trivy** — vulnerability scan (`HIGH` and `CRITICAL` severity, unfixed CVEs excluded)
+- **dockle** — CIS Docker Benchmark and best-practice lint
+
+#### Known Informational Findings
+
+The scan reports a few `INFO`-level findings that are expected and acceptable:
+
+| Finding | Why it's OK |
+|---------|-------------|
+| **DKL-LI-0001** (no `/etc/shadow`) | Nix containers don't use traditional password files — users are defined in `/etc/passwd` with `x` (no password) |
+| **CIS-DI-0005** (Content trust) | Content trust (`DOCKER_CONTENT_TRUST=1`) is a registry-push concern. The image is built by Nix, not pulled from a registry |
+| **CIS-DI-0006** (HEALTHCHECK) | The container runs a sandbox entrypoint (`nemoclaw-start`), not a long-running service. A `HEALTHCHECK` would not be meaningful |
+
+The only suppressed finding is **CIS-DI-0010** (`.env` file detected), which comes from
+an upstream OpenClaw dependency (`bottleneck`) and cannot be removed without patching
+the dependency tree.
+
 ### Manual Usage
 
 ```bash
@@ -191,6 +217,7 @@ flake.nix                    # Coordinator — imports from ./nix/
   +-- nix/shell.nix          # Dev shell (mkShell + inputsFrom)
   +-- nix/container.nix      # OCI image (dockerTools.buildLayeredImage)
   +-- nix/container-test.nix # Container smoke tests (writeShellApplication)
+  +-- nix/container-scan.nix # Security scan: trivy + dockle (writeShellApplication)
   +-- nix/docs.nix           # Sphinx documentation build
 ```
 
@@ -204,9 +231,9 @@ The package build has three phases:
 ### Module Dependencies
 
 ```text
-constants.nix --+---> source-filter.nix --+---> package.nix --+---> container.nix
-                |                         |                   |
-                |  pkgs.openclaw ---------+-------------------+
+constants.nix --+---> source-filter.nix --+---> package.nix --+---> container.nix --+---> container-test.nix
+                |                         |                   |                   |
+                |  pkgs.openclaw ---------+-------------------+                   +---> container-scan.nix
                 |                         |                   |
                 |                         +---> docs.nix      +---> shell.nix
                 |
@@ -223,6 +250,7 @@ constants.nix --+---> source-filter.nix --+---> package.nix --+---> container.ni
 | `shell.nix` | Dev shell via `mkShell` with `inputsFrom` |
 | `container.nix` | OCI image via `dockerTools.buildLayeredImage` (gosu, gateway/sandbox users) |
 | `container-test.nix` | Container smoke tests: 40 checks (structural + functional) |
+| `container-scan.nix` | Security scan: trivy (vulnerabilities) + dockle (best practices) |
 | `docs.nix` | Sphinx documentation (best-effort) |
 
 ## Updating npm Hashes

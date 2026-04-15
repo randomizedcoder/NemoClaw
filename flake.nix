@@ -11,6 +11,7 @@
 #   docker run --rm -it --entrypoint /bin/bash nemoclaw:0.1.0   Interactive shell
 #
 #   nix run .#container-test         Run container smoke tests (requires Docker)
+#   nix run .#container-scan         Security scan the container (trivy + dockle)
 #   nix build .#docs                 Build Sphinx documentation
 #   nix fmt                          Format all Nix files
 #
@@ -85,6 +86,11 @@
           docker = pkgs.docker-client;
         };
 
+        # Container security scan (trivy + dockle)
+        container-scan = pkgs.callPackage ./nix/container-scan.nix {
+          inherit container;
+        };
+
       in
       {
         packages = {
@@ -94,6 +100,7 @@
             openclaw
             container
             container-test
+            container-scan
             docs
             ;
         };

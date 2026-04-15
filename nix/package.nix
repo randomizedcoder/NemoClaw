@@ -130,12 +130,6 @@ stdenv.mkDerivation {
     # Root package.json — nemoclaw.js reads it via ../package.json
     cp package.json $out/lib/package.json
 
-    # Dockerfiles — build context needs both for sandbox image creation
-    cp Dockerfile $out/lib/Dockerfile
-    if [ -f Dockerfile.base ]; then
-      cp Dockerfile.base $out/lib/Dockerfile.base
-    fi
-
     # Wrapper binary
     mkdir -p $out/bin
     makeWrapper ${nodejs}/bin/node $out/bin/nemoclaw \
