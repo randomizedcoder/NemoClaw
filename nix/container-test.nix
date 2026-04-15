@@ -6,6 +6,7 @@
   writeShellApplication,
   docker,
   coreutils,
+  gnugrep,
   gawk,
   constants,
   container,
@@ -17,6 +18,7 @@ writeShellApplication {
   runtimeInputs = [
     docker
     coreutils
+    gnugrep
     gawk
   ];
 

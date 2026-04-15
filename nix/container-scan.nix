@@ -70,18 +70,18 @@ writeShellApplication {
     echo ""
     # Accept CIS-DI-0010 + .env: upstream openclaw dependency ships a .env file
     # that we cannot remove. All other findings are shown transparently.
-    if dockle \
+    # --exit-code 1: fail on WARN or higher (INFO findings are acceptable)
+    if ! dockle \
         --input "$IMAGE_TARBALL" \
-        --exit-code 0 \
+        --exit-code 1 \
         --accept-key "CIS-DI-0010" \
         --accept-file ".env" ; then
       echo ""
-      echo "dockle: scan complete (see above for findings)"
-    else
-      echo ""
-      echo "dockle: scan failed"
+      echo "dockle: WARN or FATAL findings detected"
       EXIT_CODE=1
     fi
+    echo ""
+    echo "dockle: scan complete"
 
     echo ""
     echo "=== Scan Complete ==="
